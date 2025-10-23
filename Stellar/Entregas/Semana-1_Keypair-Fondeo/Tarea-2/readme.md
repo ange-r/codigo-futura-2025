@@ -28,7 +28,7 @@ Para poder realizar estas prácticas es necesario contar con el siguiente stack:
 Para obtener el código de los ejercicios, cloná este repositorio en tu máquina local:
 
 ```bash
-git clone https://github.com/ange-r/tu-repo.git
+git clone https://github.com/ange-r/codigo-futura-2025.git
 cd tu-repo
 ```
 #### 💾 Instalar dependencias
