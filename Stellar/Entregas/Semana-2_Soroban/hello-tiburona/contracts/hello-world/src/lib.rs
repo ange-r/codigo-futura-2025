@@ -102,7 +102,96 @@ impl HelloContract {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    use soroban_sdk::Env;
 
+    #[test]
+    fn test_initialize() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, HelloContract);
+        let client = HelloContractClient::new(&env, &contract_id);
+        
+        let admin = Address::generate(&env);
+        
+        // Primera inicialización debe funcionar
+        client.initialize(&admin);
+        
+        // Verificar contador en 0
+        assert_eq!(client.get_contador(), 0);
+    }
 
+    #[test]
+    fn test_hello_exitoso() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, HelloContract);
+        let client = HelloContractClient::new(&env, &contract_id);
+        
+        let admin = Address::generate(&env);
+        let usuario = Address::generate(&env);
+        
+        client.initialize(&admin);
+        
+        let nombre = String::from_str(&env, "Ana");
+        let resultado = client.hello(&usuario, &nombre);
+        
+        assert_eq!(resultado, Symbol::new(&env, "Hola"));
+        assert_eq!(client.get_contador(), 1);
+        assert_eq!(client.get_ultimo_saludo(&usuario), Some(nombre));
+    }
 
+    #[test]
+    #[should_panic(expected = "NombreVacio")]
+    fn test_nombre_vacio() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, HelloContract);
+        let client = HelloContractClient::new(&env, &contract_id);
+        
+        let admin = Address::generate(&env);
+        let usuario = Address::generate(&env);
+        
+        client.initialize(&admin);
+        
+        let vacio = String::from_str(&env, "");
+        client.hello(&usuario, &vacio);  // Debe fallar
+    }
 
+    #[test]
+    fn test_reset_solo_admin() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, HelloContract);
+        let client = HelloContractClient::new(&env, &contract_id);
+        
+        let admin = Address::generate(&env);
+        let otro = Address::generate(&env);
+        let usuario = Address::generate(&env);
+        
+        client.initialize(&admin);
+        
+        // ⭐ Hacer saludos con String
+        client.hello(&usuario, &String::from_str(&env, "Test"));
+        assert_eq!(client.get_contador(), 1);
+        
+        // Admin puede resetear
+        client.reset_contador(&admin);
+        assert_eq!(client.get_contador(), 0);
+    }
+
+        #[test]
+    #[should_panic(expected = "NoAutorizado")]
+    fn test_reset_no_autorizado() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, HelloContract);
+        let client = HelloContractClient::new(&env, &contract_id);
+        
+        let admin = Address::generate(&env);
+        let otro = Address::generate(&env);
+        
+        client.initialize(&admin);
+        
+        // Otro usuario intenta resetear
+        client.reset_contador(&otro);  // Debe fallar
+    }
+
+}
