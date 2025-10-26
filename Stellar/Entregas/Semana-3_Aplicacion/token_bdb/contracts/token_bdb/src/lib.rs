@@ -424,7 +424,7 @@ impl TokenTrait for TokenBDB {
         }
         
         // 4. No permitir transferencia a sí mismo
-        if from == to {
+        if to == admin {
             return Err(TokenError::InvalidRecipient);
         }
         

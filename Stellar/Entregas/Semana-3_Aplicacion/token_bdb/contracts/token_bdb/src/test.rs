@@ -17,7 +17,7 @@ use soroban_sdk::{
 fn test_initialize() {
     // Arrange: Setup del entorno de testing
     let env = Env::default();
-    let contract_id = env.register(TokenBDB, ());
+    let contract_id = env.register(TokenBDB, ());  // <-- Esta linea cambia
     let client = TokenBDBClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
