@@ -70,20 +70,38 @@ impl HelloContract {
             .instance()
             .set(&key_contador, &(contador + 1));
 
-        // Estender TTL para poder guardar los datos
-        env.storage()
-            .persistent()
-            .extend_ttl(&DataKey::UltimoSaludo(usuario), 100, 100);
-        
-        env.storage()
-            .instance()
-            .extend_ttl(100, 100);
+    // Guardar el último saludo del usuario
+    let key_saludo = DataKey::UltimoSaludo(usuario.clone());
+    env.storage()
+        .persistent()
+        .set(&key_saludo, &nombre);
 
-        // Retorno final del saludo
-        Ok(Symbol::new(&env, "Hola Tiburona!"))
+    // Extender TTL para poder guardar los datos
+    env.storage()
+        .persistent()
+        .extend_ttl(&key_saludo, 100, 100);
 
+    env.storage()
+        .instance()
+        .extend_ttl(100, 100);
+
+    // Retorno final del saludo
+    Ok(Symbol::new(&env, "Hola Tiburona!"))
     }
 
+    pub fn get_contador(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::ContadorSaludos)
+            .unwrap_or(0)
+    }
+
+    pub fn get_ultimo_saludo(env: Env, usuario: Address) -> Option<String> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::UltimoSaludo(usuario))
+    }
+    
     pub fn reset_contador(env: Env, caller: Address) -> Result<(), Error> {
         let admin: Address = env.storage()
             .instance()
@@ -136,7 +154,7 @@ mod test {
         let nombre = String::from_str(&env, "Ana");
         let resultado = client.hello(&usuario, &nombre);
         
-        assert_eq!(resultado, Symbol::new(&env, "Hola"));
+        assert_eq!(resultado, Symbol::new(&env, "Hola Tiburona!"));
         assert_eq!(client.get_contador(), 1);
         assert_eq!(client.get_ultimo_saludo(&usuario), Some(nombre));
     }
@@ -178,7 +196,7 @@ mod test {
         assert_eq!(client.get_contador(), 0);
     }
 
-        #[test]
+    #[test]
     #[should_panic(expected = "NoAutorizado")]
     fn test_reset_no_autorizado() {
         let env = Env::default();
