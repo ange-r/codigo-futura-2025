@@ -424,7 +424,7 @@ impl TokenTrait for TokenBDB {
         }
         
         // 4. No permitir transferencia a sí mismo
-        if to == admin {
+        if to == from {
             return Err(TokenError::InvalidRecipient);
         }
         
@@ -491,7 +491,7 @@ impl TokenTrait for TokenBDB {
         
         // 9. Emitir evento completo (FIX: evento faltante)
         env.events().publish(
-            (symbol_short!("trnsfr_frm"), spender, from.clone(), to.clone()),
+            (symbol_short!("trnsf_frm"), spender, from.clone(), to.clone()),
             (amount, new_from_balance, new_to_balance, new_allowance)
         );
         
