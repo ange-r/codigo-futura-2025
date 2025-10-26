@@ -193,5 +193,4 @@ mod test {
         // Otro usuario intenta resetear
         client.reset_contador(&otro);  // Debe fallar
     }
-
 }
