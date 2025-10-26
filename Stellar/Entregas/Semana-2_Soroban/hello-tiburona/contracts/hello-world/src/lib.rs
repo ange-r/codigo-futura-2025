@@ -86,7 +86,7 @@ impl HelloContract {
         .extend_ttl(100, 100);
 
     // Retorno final del saludo
-    Ok(Symbol::new(&env, "Hola Tiburona!"))
+    Ok(Symbol::new(&env, "Hola"))
     }
 
     pub fn get_contador(env: Env) -> u32 {
@@ -155,25 +155,26 @@ mod test {
         let nombre = String::from_str(&env, "Ana");
         let resultado = client.hello(&usuario, &nombre);
         
-        assert_eq!(resultado, Symbol::new(&env, "Hola Tiburona!"));
+        assert_eq!(resultado, Symbol::new(&env, "Hola"));
         assert_eq!(client.get_contador(), 1);
         assert_eq!(client.get_ultimo_saludo(&usuario), Some(nombre));
     }
 
     #[test]
-    #[should_panic(expected = "NombreVacio")]
     fn test_nombre_vacio() {
         let env = Env::default();
         let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
-        
+    
         let admin = Address::generate(&env);
         let usuario = Address::generate(&env);
-        
+    
         client.initialize(&admin);
-        
+    
         let vacio = String::from_str(&env, "");
-        client.hello(&usuario, &vacio);  // Debe fallar
+        let resultado = client.try_hello(&usuario, &vacio);  // Debe fallar
+    
+        assert_eq!(resultado, Err(Ok(Error::NombreVacio))); // Se verific que falló
     }
 
     #[test]
@@ -198,18 +199,17 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "NoAutorizado")]
     fn test_reset_no_autorizado() {
         let env = Env::default();
         let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
-        
+    
         let admin = Address::generate(&env);
         let otro = Address::generate(&env);
-        
+    
         client.initialize(&admin);
-        
-        // Otro usuario intenta resetear
-        client.reset_contador(&otro);  // Debe fallar
+    
+        let resultado = client.try_reset_contador(&otro);
+        assert_eq!(resultado, Err(Ok(Error::NoAutorizado)));
     }
 }
