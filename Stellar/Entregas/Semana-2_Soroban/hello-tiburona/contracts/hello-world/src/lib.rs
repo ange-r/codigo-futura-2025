@@ -81,6 +81,25 @@ impl HelloContract {
 
         // Retorno final del saludo
         Ok(Symbol::new(&env, "Hola Tiburona!"))
-        
+
+    }
+
+    pub fn reset_contador(env: Env, caller: Address) -> Result<(), Error> {
+        let admin: Address = env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NoInicializado)?;
+
+        if caller != admin {
+            return Err(Error::NoAutorizado);
+        }
+
+        env.storage()
+            .instance()
+            .set(&DataKey::ContadorSaludos, &0u32);
+
+        Ok(())
     }
 }
+
+
