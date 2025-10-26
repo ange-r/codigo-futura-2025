@@ -23,11 +23,6 @@ pub enum DataKey {
 }
 
 #[contract]
-pub struct HelloTiburonaContract;
-
-
-#[contractimpl]
-#[contract]
 pub struct HelloContract;
 
 #[contractimpl]
@@ -83,6 +78,9 @@ impl HelloContract {
         env.storage()
             .instance()
             .extend_ttl(100, 100);
+
+        // Retorno final del saludo
+        Ok(Symbol::new(&env, "Hola Tiburona!"))
+        
     }
-    Ok(Symbol::new(&env, "Hola Tiburona!"))
 }
