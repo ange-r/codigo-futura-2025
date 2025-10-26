@@ -124,6 +124,7 @@ impl HelloContract {
 mod test {
     use super::*;
     use soroban_sdk::Env;
+    use soroban_sdk::testutils::Address as _;
 
     #[test]
     fn test_initialize() {
