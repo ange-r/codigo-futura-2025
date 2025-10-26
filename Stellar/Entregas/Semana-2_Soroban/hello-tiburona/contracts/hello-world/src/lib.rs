@@ -110,7 +110,7 @@ mod test {
     #[test]
     fn test_initialize() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, HelloContract);
+        let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
         
         let admin = Address::generate(&env);
@@ -125,7 +125,7 @@ mod test {
     #[test]
     fn test_hello_exitoso() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, HelloContract);
+        let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
         
         let admin = Address::generate(&env);
@@ -145,7 +145,7 @@ mod test {
     #[should_panic(expected = "NombreVacio")]
     fn test_nombre_vacio() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, HelloContract);
+        let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
         
         let admin = Address::generate(&env);
@@ -160,7 +160,7 @@ mod test {
     #[test]
     fn test_reset_solo_admin() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, HelloContract);
+        let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
         
         let admin = Address::generate(&env);
@@ -182,7 +182,7 @@ mod test {
     #[should_panic(expected = "NoAutorizado")]
     fn test_reset_no_autorizado() {
         let env = Env::default();
-        let contract_id = env.register_contract(None, HelloContract);
+        let contract_id = env.register(HelloContract, ());
         let client = HelloContractClient::new(&env, &contract_id);
         
         let admin = Address::generate(&env);
