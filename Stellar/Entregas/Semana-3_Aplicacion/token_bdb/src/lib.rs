@@ -542,3 +542,6 @@ impl TokenTrait for TokenBDB {
             .expect("Admin not initialized")
     }
 }
+
+#[cfg(test)]
+mod test;
