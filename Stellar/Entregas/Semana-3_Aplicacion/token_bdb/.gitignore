@@ -1,6 +1,40 @@
-# Rust's output directory
-target
+# Archivos de compilación de Rust
+/target/
+**/*.rs.bk
 
-# Local settings
-.soroban
-.stellar
+# Archivos WASM generados
+*.wasm
+optimized.wasm
+
+# Archivos de configuración local
+/.env
+/.env.local
+
+# Archivos de IDE
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Archivos de Stellar/Soroban CLI
+/.stellar/
+/.soroban/
+
+# Archivos de Rust
+Cargo.lock
+
+# Archivos de backup
+*.backup
+*.bak
+
+# Archivos temporales
+*.tmp
+*.temp
