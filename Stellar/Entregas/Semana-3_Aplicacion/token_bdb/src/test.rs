@@ -17,7 +17,7 @@ use soroban_sdk::{
 fn test_initialize() {
     // Arrange: Setup del entorno de testing
     let env = Env::default();
-    let contract_id = env.register(TokenBDB, ());  // <-- Esta linea cambia
+	let contract_id = env.register(TokenBDB, ());
     let client = TokenBDBClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
@@ -369,5 +369,43 @@ fn test_operations_without_init() {
         client.try_burn(&alice, &10),
         Err(Ok(TokenError::NotInitialized))
     );
+
+    /// Test: initialize con name vacío debe fallar
+    #[test]
+    fn test_invalid_metadata_empty_name() {
+        let env = Env::default();
+        let contract_id = env.register(TokenBDB, ());
+        let client = TokenBDBClient::new(&env, &contract_id);
+    
+        let admin = Address::generate(&env);
+    
+        let result = client.try_initialize(
+            &admin,
+            &String::from_str(&env, ""),  
+            &String::from_str(&env, "BDB"),
+            &7
+        );
+    
+        assert_eq!(result, Err(Ok(TokenError::InvalidMetadata)));
+    }
+
+    /// Test: initialize con symbol vacío debe fallar
+    #[test]
+    fn test_invalid_metadata_empty_symbol() {
+        let env = Env::default();
+        let contract_id = env.register(TokenBDB, ());
+        let client = TokenBDBClient::new(&env, &contract_id);
+    
+        let admin = Address::generate(&env);
+    
+        let result = client.try_initialize(
+            &admin,
+            &String::from_str(&env, "Token"),
+            &String::from_str(&env, ""),  // ❌ Symbol vacío
+            &7
+        );
+    
+        assert_eq!(result, Err(Ok(TokenError::InvalidMetadata)));
+    }
 }
 
