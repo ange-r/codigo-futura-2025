@@ -1,9 +1,481 @@
 // src/lib.rs
+// Token BDB (Buen Día Builders) - Versión Corregida para SDK 23.0.2
+//
+// CAMBIOS PRINCIPALES respecto al código de las profesoras:
+// 1. ❌ ELIMINADO: trait TokenTrait
+//    ✅ RAZÓN: El trait con Result<(), TokenError> causa conflictos con el cliente
+//              autogenerado que espera funciones que retornen () directamente
+//
+// 2. ❌ ELIMINADO: Result<(), TokenError> en funciones públicas
+//    ✅ RAZÓN: SDK 23.x maneja errores con panic_with_error!() internamente
+//              Esto genera un ABI más limpio y compatible con wallets/CLI
+//
+// 3. ❌ ELIMINADO: contractevent con structs complejos
+//    ✅ RAZÓN: Los eventos con publish() deprecados siguen funcionando y son más simples
+//              Para producción se recomienda #[contractevent], pero agrega complejidad
+//
+// 4. ✅ AGREGADO: Manejo de errores con panic_with_error!()
+//    ✅ RAZÓN: Forma estándar en SDK 23.x, funciona con tests sin modificarlos
+
 #![no_std]
 
 use soroban_sdk::{
     contract, contractimpl, Address, Env, String, 
-    symbol_short, Symbol
+    symbol_short, panic_with_error
+};
+
+mod storage;
+mod errors;
+
+use storage::DataKey;
+use errors::TokenError;
+
+/// Constantes de configuración
+const MAX_DECIMALS: u32 = 18;
+const MAX_NAME_LENGTH: u32 = 100;
+const MAX_SYMBOL_LENGTH: u32 = 32;
+
+// ============================================================================
+// CONTRATO PRINCIPAL
+// ============================================================================
+
+#[contract]
+pub struct TokenBDB;
+
+// CAMBIO 1: Implementación directa SIN trait
+// ANTES: #[contractimpl] impl TokenTrait for TokenBDB
+// AHORA: #[contractimpl] impl TokenBDB
+// RAZÓN: Evita problemas de tipos con el cliente autogenerado
+#[contractimpl]
+impl TokenBDB {
+    
+    // CAMBIO 2: Función retorna () en lugar de Result<(), TokenError>
+    // ANTES: fn initialize(...) -> Result<(), TokenError>
+    // AHORA: pub fn initialize(...) [retorna () implícito]
+    // RAZÓN: Los errores se manejan con panic_with_error!() internamente
+    //        Esto hace que los tests funcionen con .unwrap() sin problemas
+    /// Inicializa el token con metadatos y admin
+    /// 
+    /// NOTA: Esta función solo puede llamarse UNA vez
+    /// Panic si ya está inicializado o si los parámetros son inválidos
+    pub fn initialize(
+        env: Env,
+        admin: Address,
+        name: String,
+        symbol: String,
+        decimals: u32,
+    ) {
+        // CAMBIO 3: Manejo de errores con panic_with_error! en lugar de return Err()
+        // ANTES: if ... { return Err(TokenError::AlreadyInitialized); }
+        // AHORA: if ... { panic_with_error!(&env, TokenError::AlreadyInitialized); }
+        // RAZÓN: panic_with_error! es la forma correcta en SDK 23.x
+        //        Genera eventos de error automáticamente en el ledger
+        
+        if env.storage().instance().has(&DataKey::Initialized) {
+            panic_with_error!(&env, TokenError::AlreadyInitialized);
+        }
+
+        // Validaciones de parámetros
+        if name.len() == 0 || name.len() > MAX_NAME_LENGTH {
+            panic_with_error!(&env, TokenError::InvalidMetadata);
+        }
+        if symbol.len() == 0 || symbol.len() > MAX_SYMBOL_LENGTH {
+            panic_with_error!(&env, TokenError::InvalidMetadata);
+        }
+        if decimals > MAX_DECIMALS {
+            panic_with_error!(&env, TokenError::InvalidDecimals);
+        }
+
+        // CAMBIO 4: admin.require_auth() ya maneja la autenticación
+        // No necesitamos validación adicional
+        admin.require_auth();
+
+        // Guardar estado en storage
+        env.storage().instance().set(&DataKey::Initialized, &true);
+        env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().set(&DataKey::TokenName, &name);
+        env.storage().instance().set(&DataKey::TokenSymbol, &symbol);
+        env.storage().instance().set(&DataKey::Decimals, &decimals);
+        env.storage().instance().set(&DataKey::TotalSupply, &0i128);
+
+        // CAMBIO 5: Eventos simples con env.events().publish()
+        // ANTES: InitEvent { ... }.publish(&env);
+        // AHORA: env.events().publish(...)
+        // RAZÓN: Más simple, funciona igual, menos código
+        //        Los warnings de "deprecated" son solo sugerencias, no errores
+        env.events().publish(
+            (symbol_short!("init"), admin.clone()),
+            (name, symbol, decimals)
+        );
+    }
+
+    /// Crea nuevos tokens (solo admin)
+    pub fn mint(env: Env, to: Address, amount: i128) {
+        // Validación de amount
+        if amount <= 0 {
+            panic_with_error!(&env, TokenError::InvalidAmount);
+        }
+
+        // CAMBIO 6: Uso de expect() en lugar de ok_or() cuando esperamos que exista
+        // RAZÓN: Si no está inicializado, el contrato no debería estar en uso
+        //        expect() da mejor mensaje de error para debugging
+        let admin: Address = env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Token not initialized");
+
+        admin.require_auth();
+
+        // Obtener balance actual
+        let balance_key = DataKey::Balance(to.clone());
+        let current_balance: i128 = env.storage()
+            .persistent()
+            .get(&balance_key)
+            .unwrap_or(0);
+
+        // CAMBIO 7: Manejo de overflow con unwrap_or_else
+        // ANTES: .ok_or(TokenError::Overflow)?
+        // AHORA: .unwrap_or_else(|| panic_with_error!(...))
+        // RAZÓN: Consistente con el patrón sin Result<>
+        let new_balance = current_balance
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::OverflowError));
+
+        // Actualizar balance con TTL
+        env.storage().persistent().set(&balance_key, &new_balance);
+        env.storage()
+            .persistent()
+            .extend_ttl(&balance_key, 5184000, 6048000);
+
+        // Actualizar total supply
+        let total_supply: i128 = env.storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .unwrap_or(0);
+
+        let new_total_supply = total_supply
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::OverflowError));
+
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalSupply, &new_total_supply);
+
+        // Emitir evento
+        env.events().publish(
+            (symbol_short!("mint"), to.clone()),
+            (amount, new_balance, new_total_supply)
+        );
+    }
+
+    /// Destruye tokens reduciendo el supply
+    pub fn burn(env: Env, from: Address, amount: i128) {
+        if amount <= 0 {
+            panic_with_error!(&env, TokenError::InvalidAmount);
+        }
+
+        from.require_auth();
+
+        let balance_key = DataKey::Balance(from.clone());
+        let current_balance: i128 = env.storage()
+            .persistent()
+            .get(&balance_key)
+            .unwrap_or(0);
+
+        if current_balance < amount {
+            panic_with_error!(&env, TokenError::InsufficientBalance);
+        }
+
+        let new_balance = current_balance - amount;
+
+        // Optimización: eliminar key si balance queda en 0
+        if new_balance == 0 {
+            env.storage().persistent().remove(&balance_key);
+        } else {
+            env.storage().persistent().set(&balance_key, &new_balance);
+            env.storage()
+                .persistent()
+                .extend_ttl(&balance_key, 5184000, 6048000);
+        }
+
+        // Actualizar total supply
+        let total_supply: i128 = env.storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .unwrap_or(0);
+
+        let new_total_supply = total_supply
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::OverflowError));
+
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalSupply, &new_total_supply);
+
+        env.events().publish(
+            (symbol_short!("burn"), from),
+            (amount, new_balance, new_total_supply)
+        );
+    }
+
+    /// Consulta el balance de una cuenta
+    /// 
+    /// CAMBIO 8: Esta función SÍ retorna un valor (i128)
+    /// RAZÓN: Las funciones de consulta (getters) no modifican estado
+    ///        Solo las funciones que modifican estado usan panic_with_error
+    pub fn balance(env: Env, id: Address) -> i128 {
+        let balance_key = DataKey::Balance(id);
+        env.storage().persistent().get(&balance_key).unwrap_or(0)
+    }
+
+    /// Transfiere tokens entre cuentas
+    pub fn transfer(
+        env: Env,
+        from: Address,
+        to: Address,
+        amount: i128,
+    ) {
+        if amount <= 0 {
+            panic_with_error!(&env, TokenError::InvalidAmount);
+        }
+
+        // CAMBIO 9: Validación de transferencia a sí mismo
+        // ANTES: El código de las profes usaba error SameAccount
+        // AHORA: Usamos InvalidRecipient (más claro)
+        if from == to {
+            panic_with_error!(&env, TokenError::InvalidRecipient);
+        }
+
+        from.require_auth();
+
+        let from_key = DataKey::Balance(from.clone());
+        let from_balance: i128 = env.storage()
+            .persistent()
+            .get(&from_key)
+            .unwrap_or(0);
+
+        if from_balance < amount {
+            panic_with_error!(&env, TokenError::InsufficientBalance);
+        }
+
+        // Actualizar balance del sender
+        let new_from_balance = from_balance - amount;
+        if new_from_balance == 0 {
+            env.storage().persistent().remove(&from_key);
+        } else {
+            env.storage().persistent().set(&from_key, &new_from_balance);
+            env.storage()
+                .persistent()
+                .extend_ttl(&from_key, 5184000, 6048000);
+        }
+
+        // Actualizar balance del receiver
+        let to_key = DataKey::Balance(to.clone());
+        let to_balance: i128 = env.storage()
+            .persistent()
+            .get(&to_key)
+            .unwrap_or(0);
+
+        let new_to_balance = to_balance
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::OverflowError));
+
+        env.storage().persistent().set(&to_key, &new_to_balance);
+        env.storage()
+            .persistent()
+            .extend_ttl(&to_key, 5184000, 6048000);
+
+        env.events().publish(
+            (symbol_short!("transfer"), from, to),
+            (amount, new_from_balance, new_to_balance)
+        );
+    }
+
+    /// Aprueba a otro usuario para gastar tokens
+    /// 
+    /// CAMBIO 10: Simplificación de approve
+    /// ANTES: approve(..., live_until_ledger: u32)
+    /// AHORA: approve(...) sin live_until_ledger
+    /// RAZÓN: El TTL se maneja automáticamente con extend_ttl
+    ///        live_until_ledger era un parámetro redundante
+    pub fn approve(
+        env: Env,
+        from: Address,
+        spender: Address,
+        amount: i128,
+    ) {
+        // Permitir amount = 0 para revocar allowance
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::InvalidAmount);
+        }
+
+        from.require_auth();
+
+        let allowance_key = DataKey::Allowance(from.clone(), spender.clone());
+
+        if amount == 0 {
+            env.storage().persistent().remove(&allowance_key);
+        } else {
+            env.storage().persistent().set(&allowance_key, &amount);
+            env.storage()
+                .persistent()
+                .extend_ttl(&allowance_key, 5184000, 6048000);
+        }
+
+        env.events().publish(
+            (symbol_short!("approve"), from, spender),
+            amount
+        );
+    }
+
+    /// Consulta el allowance entre dos cuentas
+    pub fn allowance(env: Env, from: Address, spender: Address) -> i128 {
+        let allowance_key = DataKey::Allowance(from, spender);
+        env.storage().persistent().get(&allowance_key).unwrap_or(0)
+    }
+
+    /// Transfiere tokens en nombre de otro usuario
+    pub fn transfer_from(
+        env: Env,
+        spender: Address,
+        from: Address,
+        to: Address,
+        amount: i128,
+    ) {
+        if amount <= 0 {
+            panic_with_error!(&env, TokenError::InvalidAmount);
+        }
+
+        if from == to {
+            panic_with_error!(&env, TokenError::InvalidRecipient);
+        }
+
+        spender.require_auth();
+
+        // Verificar allowance
+        let allowance_key = DataKey::Allowance(from.clone(), spender.clone());
+        let current_allowance: i128 = env.storage()
+            .persistent()
+            .get(&allowance_key)
+            .unwrap_or(0);
+
+        if current_allowance < amount {
+            panic_with_error!(&env, TokenError::InsufficientAllowance);
+        }
+
+        // Verificar balance
+        let from_key = DataKey::Balance(from.clone());
+        let from_balance: i128 = env.storage()
+            .persistent()
+            .get(&from_key)
+            .unwrap_or(0);
+
+        if from_balance < amount {
+            panic_with_error!(&env, TokenError::InsufficientBalance);
+        }
+
+        // Actualizar balance del owner
+        let new_from_balance = from_balance - amount;
+        if new_from_balance == 0 {
+            env.storage().persistent().remove(&from_key);
+        } else {
+            env.storage().persistent().set(&from_key, &new_from_balance);
+            env.storage()
+                .persistent()
+                .extend_ttl(&from_key, 5184000, 6048000);
+        }
+
+        // Actualizar balance del receiver
+        let to_key = DataKey::Balance(to.clone());
+        let to_balance: i128 = env.storage()
+            .persistent()
+            .get(&to_key)
+            .unwrap_or(0);
+
+        let new_to_balance = to_balance
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::OverflowError));
+
+        env.storage().persistent().set(&to_key, &new_to_balance);
+        env.storage()
+            .persistent()
+            .extend_ttl(&to_key, 5184000, 6048000);
+
+        // Reducir allowance
+        let new_allowance = current_allowance - amount;
+        if new_allowance == 0 {
+            env.storage().persistent().remove(&allowance_key);
+        } else {
+            env.storage().persistent().set(&allowance_key, &new_allowance);
+            env.storage()
+                .persistent()
+                .extend_ttl(&allowance_key, 5184000, 6048000);
+        }
+
+        env.events().publish(
+            (symbol_short!("trnsf_frm"), spender, from.clone(), to.clone()),
+            (amount, new_from_balance, new_to_balance, new_allowance)
+        );
+    }
+
+    // GETTERS (Funciones de consulta)
+    // NOTA: Estas funciones SÍ retornan valores porque no modifican estado
+
+    pub fn name(env: Env) -> String {
+        if !env.storage().instance().has(&DataKey::Initialized) {
+            return String::from_str(&env, "");
+        }
+
+        env.storage()
+            .instance()
+            .get(&DataKey::TokenName)
+            .unwrap_or(String::from_str(&env, ""))
+    }
+
+    pub fn symbol(env: Env) -> String {
+        if !env.storage().instance().has(&DataKey::Initialized) {
+            return String::from_str(&env, "");
+        }
+
+        env.storage()
+            .instance()
+            .get(&DataKey::TokenSymbol)
+            .unwrap_or(String::from_str(&env, ""))
+    }
+
+    pub fn decimals(env: Env) -> u32 {
+        if !env.storage().instance().has(&DataKey::Initialized) {
+            return 0;
+        }
+
+        env.storage().instance().get(&DataKey::Decimals).unwrap_or(0)
+    }
+
+    pub fn total_supply(env: Env) -> i128 {
+        env.storage()
+            .instance()
+            .get(&DataKey::TotalSupply)
+            .unwrap_or(0)
+    }
+
+    pub fn admin(env: Env) -> Address {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not initialized")
+    }
+}
+
+#[cfg(test)]
+mod test;
+
+
+/* // src/lib.rs
+#![no_std]
+
+use soroban_sdk::{
+    contract, contractimpl, Address, Env, String, 
+    symbol_short,
 };
 
 mod storage;
@@ -545,3 +1017,4 @@ impl TokenTrait for TokenBDB {
 
 #[cfg(test)]
 mod test;
+*/
