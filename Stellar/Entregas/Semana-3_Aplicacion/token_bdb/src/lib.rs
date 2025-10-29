@@ -381,15 +381,15 @@ impl TokenTrait for TokenBDB {
         if amount == 0 {
             // Optimización: eliminar key si allowance = 0
             env.storage().persistent().remove(
-                &DataKey::Allowance(from, spender.clone()) // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()) // CORREGIDO: sin clone()
             );
         } else {
             env.storage().persistent().set(
-                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()), // CORREGIDO: sin clone()
                 &amount
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
@@ -406,7 +406,7 @@ impl TokenTrait for TokenBDB {
     
     fn allowance(env: Env, from: Address, spender: Address) -> i128 {
         env.storage().persistent()
-            .get(&DataKey::Allowance(from, spender.clone()))
+            .get(&DataKey::Allowance(from.clone(), spender.clone()))
             .unwrap_or(0)
     }
     
@@ -483,15 +483,15 @@ impl TokenTrait for TokenBDB {
         
         if new_allowance == 0 {
             env.storage().persistent().remove(
-                &DataKey::Allowance(from, spender.clone()) // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()) // CORREGIDO: sin clone()
             );
         } else {
             env.storage().persistent().set(
-                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()), // CORREGIDO: sin clone()
                 &new_allowance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
