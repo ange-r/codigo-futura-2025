@@ -38,3 +38,4 @@ Cargo.lock
 # Archivos temporales
 *.tmp
 *.temp
+cacert.pem
