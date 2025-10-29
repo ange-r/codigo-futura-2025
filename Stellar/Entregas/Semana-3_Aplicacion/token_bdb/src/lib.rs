@@ -2,7 +2,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contractclient, Address, Env, String, 
+    contract, contractimpl, contractclient, contractevent, Address, Env, String, 
     symbol_short,
 };
 
@@ -11,6 +11,62 @@ mod errors;
 
 use storage::{DataKey, TokenMetadata};
 use errors::TokenError;
+
+// EVENTOS - corrige warning .publish() deprecado
+
+#[contractevent]
+pub struct InitEvent {
+    pub admin: Address,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u32,
+}
+
+#[contractevent]
+pub struct MintEvent {
+    pub to: Address,
+    pub amount: i128,
+    pub new_balance: i128,
+    pub new_supply: i128,
+}
+
+#[contractevent]
+pub struct BurnEvent {
+    pub from: Address,
+    pub amount: i128,
+    pub new_balance: i128, 
+    pub new_supply: i128,
+}
+
+#[contractevent]
+pub struct TransferFromEvent {
+    pub spender: Address,
+    pub from: Address, 
+    pub to: Address,
+    pub amount: i128,
+    pub from_new_balance: i128,
+    pub to_new_balance: i128,
+    pub new_allowance: i128,
+}
+
+#[contractevent]
+pub struct ApproveEvent {
+    pub from: Address,
+    pub spender: Address,
+    pub old_allowance: i128,
+    pub new_allowance: i128,
+}
+
+#[contractevent]
+pub struct TransferFromEvent {
+    pub spender: Address,
+    pub from: Address, 
+    pub to: Address,
+    pub amount: i128,
+    pub from_new_balance: i128,
+    pub to_new_balance: i128,
+    pub new_allowance: i128,
+}
 
 /// Constantes de configuración
 const MAX_DECIMALS: u32 = 18;
@@ -151,14 +207,12 @@ impl TokenTrait for TokenBDB {
         env.storage().instance().extend_ttl(100_000, 200_000);
         
         // 6. Emitir evento rico con todos los metadatos
-        env.events().publish(
-            (symbol_short!("init"), admin.clone()),
-            TokenMetadata {
-                name: name.clone(),
-                symbol: symbol.clone(),
-                decimals,
-            }
-        );
+		InitEvent {
+			admin: admin.clone(),
+			name: name.clone(),       
+			symbol: symbol.clone(),   
+			decimals,                 
+		}.publish(&env);
         
         Ok(())
     }
@@ -191,13 +245,13 @@ impl TokenTrait for TokenBDB {
         // 6. Actualizar balance con TTL extendido
         // CORRECCIÓN: Eliminar clone() innecesario - Address ya se pasa eficientemente
         // VIEJA FORMA: &DataKey::Balance(to.clone())
-        // NUEVA FORMA: &DataKey:: Balance(to.clone()) sin clone innecesario
+        // NUEVA FORMA: &DataKey::Balance(to.clone()) sin clone innecesario
         env.storage().persistent().set(
-            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
+            &DataKey::Balance(to.clone()), // CORREGIDO: sin clone()
             &new_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
+            &DataKey::Balance(to.clone()), // CORREGIDO: sin clone()
             100_000,
             200_000
         );
@@ -245,15 +299,14 @@ impl TokenTrait for TokenBDB {
         let new_balance = balance - amount;
         if new_balance == 0 {
             // Optimización: eliminar key si balance = 0
-            // CORREGIDO: sin clone() innecesario
-            env.storage().persistent().remove(&DataKey:: Balance(from.clone()));
+            env.storage().persistent().remove(&DataKey::Balance(from.clone()));
         } else {
             env.storage().persistent().set(
-                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
+                &DataKey::Balance(from.clone()), 
                 &new_balance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
+                &DataKey::Balance(from.clone()), 
                 100_000,
                 200_000
             );
@@ -324,25 +377,25 @@ impl TokenTrait for TokenBDB {
         // Optimización: si from_balance = 0, eliminar key
         // CORREGIDO: sin clone() innecesario
         if new_from_balance == 0 {
-            env.storage().persistent().remove(&DataKey:: Balance(from.clone()));
+            env.storage().persistent().remove(&DataKey::Balance(from.clone()));
         } else {
             env.storage().persistent().set(
-                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
+                &DataKey::Balance(from.clone()), // CORREGIDO: sin clone()
                 &new_from_balance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
+                &DataKey::Balance(from.clone()), 
                 100_000,
                 200_000
             );
         }
         
         env.storage().persistent().set(
-            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
+            &DataKey::Balance(to.clone()), 
             &new_to_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
+            &DataKey::Balance(to.clone()), 
             100_000,
             200_000
         );
@@ -407,109 +460,110 @@ impl TokenTrait for TokenBDB {
     }
     
     fn allowance(env: Env, from: Address, spender: Address) -> i128 {
-        env.storage().persistent()
-            .get(&DataKey::Allowance(from.clone(), spender.clone()))
-            .unwrap_or(0)
+    env.storage().persistent()
+        .get(&DataKey::Allowance(from.clone(), spender.clone()))
+        .unwrap_or(0)
+}
+
+fn transfer_from(
+    env: Env, 
+    spender: Address, 
+    from: Address, 
+    to: Address, 
+    amount: i128
+) -> Result<(), TokenError> {
+    // 1. Verificar inicialización
+    if !env.storage().instance().has(&DataKey::Initialized) {
+        return Err(TokenError::NotInitialized);
     }
     
-    fn transfer_from(
-        env: Env, 
-        spender: Address, 
-        from: Address, 
-        to: Address, 
-        amount: i128
-    ) -> Result<(), TokenError> {
-        // 1. Verificar inicialización
-        if !env.storage().instance().has(&DataKey::Initialized) {
-            return Err(TokenError::NotInitialized);
-        }
-        
-        // 2. Verificar autorización del spender
-        spender.require_auth();
-        
-        // 3. Validaciones
-        if amount <= 0 {
-            return Err(TokenError::InvalidAmount);
-        }
-        
-        // 4. No permitir transferencia a sí mismo
-        if to == from {
-            return Err(TokenError::InvalidRecipient);
-        }
-        
-        // 5. Verificar allowance
-        let allowed = Self::allowance(env.clone(), from.clone(), spender.clone());
-        if allowed < amount {
-            return Err(TokenError::InsufficientAllowance);
-        }
-        
-        // 6. Verificar balance
-        let from_balance = Self::balance(env.clone(), from.clone());
-        if from_balance < amount {
-            return Err(TokenError::InsufficientBalance);
-        }
-        
-        // 7. Calcular nuevos valores
-        let new_from_balance = from_balance - amount;
-        let to_balance = Self::balance(env.clone(), to.clone());
-        let new_to_balance = to_balance.checked_add(amount)
-            .ok_or(TokenError::OverflowError)?;
-        let new_allowance = allowed - amount;
-        
-        // 8. Actualizar estado atómicamente
-        // Optimización: eliminar keys si son 0
-        // CORREGIDO: sin clone() innecesario
-        if new_from_balance == 0 {
-            env.storage().persistent().remove(&DataKey::Balance(from.clone()));
-        } else {
-            env.storage().persistent().set(
-                &DataKey::Balance(from.clone()), 
-                &new_from_balance
-            );
-            env.storage().persistent().extend_ttl(
-                &DataKey::Balance(from.clone()), 
-                100_000,
-                200_000
-            );
-        }
-        
+    // 2. Verificar autorización del spender
+    spender.require_auth();
+    
+    // 3. Validaciones
+    if amount <= 0 {
+        return Err(TokenError::InvalidAmount);
+    }
+    
+    // 4. No permitir transferencia a sí mismo
+    if to == from {
+        return Err(TokenError::InvalidRecipient);
+    }
+    
+    // 5. Verificar allowance
+    let allowed = Self::allowance(env.clone(), from.clone(), spender.clone());
+    if allowed < amount {
+        return Err(TokenError::InsufficientAllowance);
+    }
+    
+    // 6. Verificar balance
+    let from_balance = Self::balance(env.clone(), from.clone());
+    if from_balance < amount {
+        return Err(TokenError::InsufficientBalance);
+    }
+    
+    // 7. Calcular nuevos valores
+    let new_from_balance = from_balance - amount;
+    let to_balance = Self::balance(env.clone(), to.clone());
+    let new_to_balance = to_balance.checked_add(amount)
+        .ok_or(TokenError::OverflowError)?;
+    let new_allowance = allowed - amount;
+    
+    // 8. Actualizar estado atómicamente
+    if new_from_balance == 0 {
+        env.storage().persistent().remove(&DataKey::Balance(from.clone()));
+    } else {
         env.storage().persistent().set(
-            &DataKey::Balance(to.clone()), 
-            &new_to_balance
+            &DataKey::Balance(from.clone()), 
+            &new_from_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey::Balance(to.clone()), 
+            &DataKey::Balance(from.clone()), 
             100_000,
             200_000
         );
-        
-        if new_allowance == 0 {
-            env.storage().persistent().remove(
-                &DataKey::Allowance(from.clone(), spender.clone()) 
-            );
-        } else {
-            env.storage().persistent().set(
-                &DataKey::Allowance(from.clone(), spender.clone()), 
-                &new_allowance
-            );
-            env.storage().persistent().extend_ttl(
-                &DataKey::Allowance(from.clone(), spender.clone()), 
-                100_000,
-                200_000
-            );
-        }
-        
-        // 9. Emitir evento completo
-        // CORRECCIÓN: Usar símbolo estándar en lugar de abreviado
-        // VIEJA FORMA: symbol_short!("trnsf_frm") - no estándar
-        // NUEVA FORMA: symbol_short!("xfer_from") - estándar y claro
-        env.events().publish(
-            (symbol_short!("xfer_from"), spender, from.clone(), to.clone()),
-            (amount, new_from_balance, new_to_balance, new_allowance)
-        );
-        
-        Ok(())
     }
+    
+    env.storage().persistent().set(
+        &DataKey::Balance(to.clone()), 
+        &new_to_balance
+    );
+    env.storage().persistent().extend_ttl(
+        &DataKey::Balance(to.clone()), 
+        100_000,
+        200_000
+    );
+    
+    if new_allowance == 0 {
+        env.storage().persistent().remove(
+            &DataKey::Allowance(from.clone(), spender.clone()) 
+        );
+    } else {
+        env.storage().persistent().set(
+            &DataKey::Allowance(from.clone(), spender.clone()), 
+            &new_allowance
+        );
+        env.storage().persistent().extend_ttl(
+            &DataKey::Allowance(from.clone(), spender.clone()), 
+            100_000,
+            200_000
+        );
+    }
+    
+		// 9. Emitir evento CORREGIDO
+		TransferFromEvent {
+		    spender: spender.clone(),
+		    from: from.clone(), 
+		    to: to.clone(),
+		    amount: amount,
+		    from_new_balance: new_from_balance,
+		    to_new_balance: new_to_balance,
+		    new_allowance: new_allowance,
+		}.publish(&env);
+		
+		Ok(())
+	}
+
     
     // Métodos de consulta
     fn name(env: Env) -> String {
@@ -517,23 +571,23 @@ impl TokenTrait for TokenBDB {
         if !env.storage().instance().has(&DataKey::Initialized) {
             // CORRECCIÓN: String::new() en lugar de String::from_str() que no existe
             // VIEJA FORMA: String::from_str(&env, "") - método inexistente
-            // NUEVA FORMA: String::from_slice(&env, "") - forma correcta de crear String vacío
-            return String::from_slice(&env, "");
+            // NUEVA FORMA: String::from_str(&env, "") - forma correcta de crear String vacío
+            return String::from_str(&env, "");
         }
         
         env.storage().instance()
             .get(&DataKey::TokenName)
-            .unwrap_or(String::from_slice(&env, "")) 
+            .unwrap_or(String::from_str(&env, "")) 
     }
     
     fn symbol(env: Env) -> String {
         if !env.storage().instance().has(&DataKey::Initialized) {
-            return String::from_slice(&env, ""); 
+            return String::from_str(&env, ""); 
         }
         
         env.storage().instance()
             .get(&DataKey::TokenSymbol)
-            .unwrap_or(String::from_slice(&env, ""))
+            .unwrap_or(String::from_str(&env, ""))
     }
     
     fn decimals(env: Env) -> u32 {
