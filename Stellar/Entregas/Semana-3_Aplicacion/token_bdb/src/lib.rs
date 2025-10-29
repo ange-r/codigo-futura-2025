@@ -2,7 +2,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, Address, Env, String, 
+    contract, contractimpl, contractclient, Address, Env, String, 
     symbol_short,
 };
 
