@@ -372,8 +372,9 @@ fn test_operations_without_init() {
         client.try_burn(&alice, &10),
         Err(Ok(TokenError::NotInitialized))
     );
+}
 
-    /// Test: inicialización con nombre vacío debe fallar
+/// Test: inicialización con nombre vacío debe fallar
 #[test]
 fn test_initialize_empty_name_fails() {
     let env = Env::default();
@@ -409,5 +410,4 @@ fn test_initialize_empty_symbol_fails() {
         &7
     );
     assert_eq!(result, Err(Ok(TokenError::InvalidMetadata)));
-}
 }
