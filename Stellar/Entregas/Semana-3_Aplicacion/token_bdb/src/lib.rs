@@ -189,13 +189,13 @@ impl TokenTrait for TokenBDB {
         // 6. Actualizar balance con TTL extendido
         // CORRECCIÓN: Eliminar clone() innecesario - Address ya se pasa eficientemente
         // VIEJA FORMA: &DataKey::Balance(to.clone())
-        // NUEVA FORMA: &DataKey::Balance(to) sin clone innecesario
+        // NUEVA FORMA: &DataKey:: Balance(to.clone()) sin clone innecesario
         env.storage().persistent().set(
-            &DataKey::Balance(to), // CORREGIDO: sin clone()
+            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
             &new_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey::Balance(to), // CORREGIDO: sin clone()
+            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
             100_000,
             200_000
         );
@@ -244,14 +244,14 @@ impl TokenTrait for TokenBDB {
         if new_balance == 0 {
             // Optimización: eliminar key si balance = 0
             // CORREGIDO: sin clone() innecesario
-            env.storage().persistent().remove(&DataKey::Balance(from));
+            env.storage().persistent().remove(&DataKey:: Balance(from.clone()));
         } else {
             env.storage().persistent().set(
-                &DataKey::Balance(from), // CORREGIDO: sin clone()
+                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
                 &new_balance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Balance(from), // CORREGIDO: sin clone()
+                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
@@ -322,25 +322,25 @@ impl TokenTrait for TokenBDB {
         // Optimización: si from_balance = 0, eliminar key
         // CORREGIDO: sin clone() innecesario
         if new_from_balance == 0 {
-            env.storage().persistent().remove(&DataKey::Balance(from));
+            env.storage().persistent().remove(&DataKey:: Balance(from.clone()));
         } else {
             env.storage().persistent().set(
-                &DataKey::Balance(from), // CORREGIDO: sin clone()
+                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
                 &new_from_balance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Balance(from), // CORREGIDO: sin clone()
+                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
         }
         
         env.storage().persistent().set(
-            &DataKey::Balance(to), // CORREGIDO: sin clone()
+            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
             &new_to_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey::Balance(to), // CORREGIDO: sin clone()
+            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
             100_000,
             200_000
         );
@@ -381,15 +381,15 @@ impl TokenTrait for TokenBDB {
         if amount == 0 {
             // Optimización: eliminar key si allowance = 0
             env.storage().persistent().remove(
-                &DataKey::Allowance(from, spender) // CORREGIDO: sin clone()
+                &DataKey::Allowance(from, spender.clone()) // CORREGIDO: sin clone()
             );
         } else {
             env.storage().persistent().set(
-                &DataKey::Allowance(from, spender), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
                 &amount
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Allowance(from, spender), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
@@ -406,7 +406,7 @@ impl TokenTrait for TokenBDB {
     
     fn allowance(env: Env, from: Address, spender: Address) -> i128 {
         env.storage().persistent()
-            .get(&DataKey::Allowance(from, spender))
+            .get(&DataKey::Allowance(from, spender.clone()))
             .unwrap_or(0)
     }
     
@@ -458,40 +458,40 @@ impl TokenTrait for TokenBDB {
         // Optimización: eliminar keys si son 0
         // CORREGIDO: sin clone() innecesario
         if new_from_balance == 0 {
-            env.storage().persistent().remove(&DataKey::Balance(from));
+            env.storage().persistent().remove(&DataKey:: Balance(from.clone()));
         } else {
             env.storage().persistent().set(
-                &DataKey::Balance(from), // CORREGIDO: sin clone()
+                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
                 &new_from_balance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Balance(from), // CORREGIDO: sin clone()
+                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
         }
         
         env.storage().persistent().set(
-            &DataKey::Balance(to), // CORREGIDO: sin clone()
+            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
             &new_to_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey::Balance(to), // CORREGIDO: sin clone()
+            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
             100_000,
             200_000
         );
         
         if new_allowance == 0 {
             env.storage().persistent().remove(
-                &DataKey::Allowance(from, spender) // CORREGIDO: sin clone()
+                &DataKey::Allowance(from, spender.clone()) // CORREGIDO: sin clone()
             );
         } else {
             env.storage().persistent().set(
-                &DataKey::Allowance(from, spender), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
                 &new_allowance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Allowance(from, spender), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from, spender.clone()), // CORREGIDO: sin clone()
                 100_000,
                 200_000
             );
@@ -500,9 +500,9 @@ impl TokenTrait for TokenBDB {
         // 9. Emitir evento completo
         // CORRECCIÓN: Usar símbolo estándar en lugar de abreviado
         // VIEJA FORMA: symbol_short!("trnsf_frm") - no estándar
-        // NUEVA FORMA: symbol_short!("transfer_from") - estándar y claro
+        // NUEVA FORMA: symbol_short!("xfer_from") - estándar y claro
         env.events().publish(
-            (symbol_short!("transfer_from"), spender, from.clone(), to.clone()),
+            (symbol_short!("xfer_from"), spender, from.clone(), to.clone()),
             (amount, new_from_balance, new_to_balance, new_allowance)
         );
         
