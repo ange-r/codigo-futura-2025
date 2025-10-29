@@ -372,4 +372,42 @@ fn test_operations_without_init() {
         client.try_burn(&alice, &10),
         Err(Ok(TokenError::NotInitialized))
     );
+
+    /// Test: inicialización con nombre vacío debe fallar
+#[test]
+fn test_initialize_empty_name_fails() {
+    let env = Env::default();
+    let contract_id = env.register(TokenBDB, ());
+    let client = TokenBDBClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    
+    // Nombre vacío debe fallar
+    let result = client.try_initialize(
+        &admin,
+        &String::from_str(&env, ""),  // Nombre vacío
+        &String::from_str(&env, "BDB"),
+        &7
+    );
+    assert_eq!(result, Err(Ok(TokenError::InvalidMetadata)));
+}
+
+/// Test: inicialización con símbolo vacío debe fallar  
+#[test]
+fn test_initialize_empty_symbol_fails() {
+    let env = Env::default();
+    let contract_id = env.register(TokenBDB, ());
+    let client = TokenBDBClient::new(&env, &contract_id);
+    
+    let admin = Address::generate(&env);
+    
+    // Símbolo vacío debe fallar
+    let result = client.try_initialize(
+        &admin,
+        &String::from_str(&env, "Builder Token"),
+        &String::from_str(&env, ""),  // Símbolo vacío
+        &7
+    );
+    assert_eq!(result, Err(Ok(TokenError::InvalidMetadata)));
+}
 }
