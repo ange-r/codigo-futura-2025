@@ -57,21 +57,16 @@ pub struct ApproveEvent {
     pub new_allowance: i128,
 }
 
-#[contractevent]
-pub struct TransferFromEvent {
-    pub spender: Address,
-    pub from: Address, 
-    pub to: Address,
-    pub amount: i128,
-    pub from_new_balance: i128,
-    pub to_new_balance: i128,
-    pub new_allowance: i128,
-}
-
 /// Constantes de configuración
 const MAX_DECIMALS: u32 = 18;
 const MAX_NAME_LENGTH: u32 = 100;
 const MAX_SYMBOL_LENGTH: u32 = 32;
+
+
+/// Estructura del contrato Token BDB
+#[contract]
+#[contractclient(name = "TokenBDBClient")]
+pub struct TokenBDB;
 
 /// Trait que define la interfaz del token según CAP-46
 /// 
@@ -156,12 +151,6 @@ pub trait TokenTrait {
     fn total_supply(env: Env) -> i128;
     fn admin(env: Env) -> Address;
 }
-
-/// Estructura del contrato Token BDB
-#[contract]
-#[contractclient(name = "TokenBDBClient")]
-pub struct TokenBDB;
-
 
 /// Implementación del contrato
 #[contractimpl]
@@ -268,10 +257,12 @@ impl TokenTrait for TokenBDB {
         );
         
         // 8. Emitir evento detallado
-        env.events().publish(
-            (symbol_short!("mint"), to.clone()), 
-            (amount, new_balance, new_total)
-        );
+        MintEvent {
+            to: to.clone(),
+            amount,
+            new_balance,
+            new_supply: new_total,
+        }.publish(&env);
         
         Ok(())
     }
@@ -324,10 +315,12 @@ impl TokenTrait for TokenBDB {
         );
         
         // 6. Emitir evento
-        env.events().publish(
-            (symbol_short!("burn"), from),
-            (amount, new_balance, new_total)
-        );
+        BurnEvent {
+            from: from.clone(),
+            amount,
+            new_balance,
+            new_supply: new_total,
+        }.publish(&env);
         
         Ok(())
     }
@@ -401,11 +394,14 @@ impl TokenTrait for TokenBDB {
         );
         
         // 7. Emitir evento con balances post-transferencia
-        env.events().publish(
-            (symbol_short!("transfer"), from, to), 
-            (amount, new_from_balance, new_to_balance)
-        );
-        
+        TransferEvent {
+            from: from.clone(),
+            to: to.clone(),
+            amount,
+            from_new_balance: new_from_balance,
+            to_new_balance: new_to_balance,
+        }.publish(&env);
+                
         Ok(())
     }
     
@@ -451,10 +447,12 @@ impl TokenTrait for TokenBDB {
         }
         
         // 6. Evento mejorado con allowance anterior y nuevo
-        env.events().publish(
-            (symbol_short!("approve"), from, spender),
-            (old_allowance, amount)
-        );
+        ApproveEvent {
+            from: from.clone(),
+            spender: spender.clone(),
+            old_allowance,
+            new_allowance: amount,
+        }.publish(&env);
         
         Ok(())
     }
