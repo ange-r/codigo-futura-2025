@@ -7,6 +7,8 @@ use soroban_sdk::{
     Address, Env, String, symbol_short,
 };
 
+use crate::TokenBDBClient;
+
 /// Test básico de inicialización del token
 /// 
 /// Verifica que:
@@ -21,9 +23,9 @@ fn test_initialize() {
     let client = TokenBDBClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
-    // CORRECCIÓN: String::from_slice() en lugar de String::from_str() que no existe en Soroban SDK
-    let name = String::from_slice(&env, "Builder Token");
-    let symbol = String::from_slice(&env, "BDB");
+    // CORRECCIÓN: String::from_str() en lugar de String::from_str() que no existe en Soroban SDK
+    let name = String::from_str(&env, "Builder Token");
+    let symbol = String::from_str(&env, "BDB");
     
     // Act: Inicializar el token
     let result = client.initialize(&admin, &name, &symbol, &7);
@@ -47,9 +49,9 @@ fn test_initialize_twice_fails() {
     let client = TokenBDBClient::new(&env, &contract_id);
     
     let admin = Address::generate(&env);
-    // CORREGIDO: String::from_slice() - método correcto para crear String desde literal
-    let name = String::from_slice(&env, "Token");
-    let symbol = String::from_slice(&env, "TOK");
+    // CORREGIDO: String::from_str() - método correcto para crear String desde literal
+    let name = String::from_str(&env, "Token");
+    let symbol = String::from_str(&env, "TOK");
     
     // Primera inicialización debe funcionar
     assert!(client.initialize(&admin, &name, &symbol, &7).is_ok());
@@ -75,8 +77,8 @@ fn test_invalid_decimals() {
     // Decimales > 18 debe fallar
     let result = client.try_initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO: from_slice en lugar de from_str
-        &String::from_slice(&env, "TOK"),   // CORREGIDO: método correcto del SDK
+        &String::from_str(&env, "Token"), // CORREGIDO: from_slice en lugar de from_str
+        &String::from_str(&env, "TOK"),   // CORREGIDO: método correcto del SDK
         &19  // ❌ Inválido: excede MAX_DECIMALS (18)
     );
     assert_eq!(result, Err(Ok(TokenError::InvalidDecimals)));
@@ -101,8 +103,8 @@ fn test_mint_and_balance() {
     // Initialize el token
     client.initialize(
         &admin, 
-        &String::from_slice(&env, "Builder Token"), // CORREGIDO: from_slice()
-        &String::from_slice(&env, "BDB"),           // CORREGIDO: método válido
+        &String::from_str(&env, "Builder Token"), // CORREGIDO: from_slice()
+        &String::from_str(&env, "BDB"),           // CORREGIDO: método válido
         &7
     ).unwrap();
     
@@ -132,8 +134,8 @@ fn test_mint_zero_fails() {
     
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO: from_slice()
-        &String::from_slice(&env, "TOK"),   // CORREGIDO
+        &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
+        &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
     ).unwrap();
     
@@ -163,8 +165,8 @@ fn test_transfer() {
     // Setup: Initialize y dar tokens a Alice
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Builder Token"), // CORREGIDO
-        &String::from_slice(&env, "BDB"),           // CORREGIDO
+        &String::from_str(&env, "Builder Token"), // CORREGIDO
+        &String::from_str(&env, "BDB"),           // CORREGIDO
         &7
     ).unwrap();
     
@@ -195,8 +197,8 @@ fn test_transfer_insufficient_balance() {
     
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO: from_slice()
-        &String::from_slice(&env, "TOK"),   // CORREGIDO
+        &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
+        &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
     ).unwrap();
     
@@ -225,8 +227,8 @@ fn test_transfer_to_self() {
     
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO
-        &String::from_slice(&env, "TOK"),   // CORREGIDO
+        &String::from_str(&env, "Token"), // CORREGIDO
+        &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
     ).unwrap();
     
@@ -259,8 +261,8 @@ fn test_approve_and_transfer_from() {
     // Setup
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO: from_slice()
-        &String::from_slice(&env, "TOK"),   // CORREGIDO
+        &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
+        &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
     ).unwrap();
     
@@ -296,8 +298,8 @@ fn test_transfer_from_insufficient_allowance() {
     
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO
-        &String::from_slice(&env, "TOK"),   // CORREGIDO
+        &String::from_str(&env, "Token"), // CORREGIDO
+        &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
     ).unwrap();
     
@@ -325,8 +327,8 @@ fn test_burn() {
     
     client.initialize(
         &admin,
-        &String::from_slice(&env, "Token"), // CORREGIDO: from_slice()
-        &String::from_slice(&env, "TOK"),   // CORREGIDO
+        &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
+        &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
     ).unwrap();
     
