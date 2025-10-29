@@ -39,6 +39,15 @@ pub struct BurnEvent {
 }
 
 #[contractevent]
+pub struct TransferEvent {
+    pub from: Address,
+    pub to: Address,
+    pub amount: i128,
+    pub from_new_balance: i128,
+    pub to_new_balance: i128,
+}
+
+#[contractevent]
 pub struct TransferFromEvent {
     pub spender: Address,
     pub from: Address, 
@@ -65,7 +74,6 @@ const MAX_SYMBOL_LENGTH: u32 = 32;
 
 /// Estructura del contrato Token BDB
 #[contract]
-#[contractclient(name = "TokenBDBClient")]
 pub struct TokenBDB;
 
 /// Trait que define la interfaz del token según CAP-46
@@ -398,8 +406,8 @@ impl TokenTrait for TokenBDB {
             from: from.clone(),
             to: to.clone(),
             amount,
-            from_new_balance: new_from_balance,
-            to_new_balance: new_to_balance,
+            from_new_balance: new_from_balance,  
+            to_new_balance: new_to_balance,        
         }.publish(&env);
                 
         Ok(())
