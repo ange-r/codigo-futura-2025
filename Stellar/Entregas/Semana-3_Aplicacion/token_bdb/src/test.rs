@@ -29,7 +29,6 @@ fn test_initialize() {
     
     // Act: Inicializar el token
     let result = client.initialize(&admin, &name, &symbol, &7);
-    assert!(result.is_ok());
     
     // Assert: Verificar que los metadatos se guardaron correctamente
     assert_eq!(client.name(), name);
@@ -54,7 +53,7 @@ fn test_initialize_twice_fails() {
     let symbol = String::from_str(&env, "TOK");
     
     // Primera inicialización debe funcionar
-    assert!(client.initialize(&admin, &name, &symbol, &7).is_ok());
+    client.initialize(&admin, &name, &symbol, &7);
     
     // Segunda debe fallar con AlreadyInitialized
     let result = client.try_initialize(&admin, &name, &symbol, &7);
@@ -106,13 +105,13 @@ fn test_mint_and_balance() {
         &String::from_str(&env, "Builder Token"), // CORREGIDO: from_slice()
         &String::from_str(&env, "BDB"),           // CORREGIDO: método válido
         &7
-    ).unwrap();
+    );
     
     // Mock auth: En tests, simulamos autorizaciones sin firmas reales
     env.mock_all_auths();
     
     // Mintear 1000 tokens
-    client.mint(&user, &1000).unwrap();
+    client.mint(&user, &1000);
     
     // Verificar estado actualizado
     assert_eq!(client.balance(&user), 1000);
@@ -137,7 +136,7 @@ fn test_mint_zero_fails() {
         &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
         &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
     
@@ -168,13 +167,13 @@ fn test_transfer() {
         &String::from_str(&env, "Builder Token"), // CORREGIDO
         &String::from_str(&env, "BDB"),           // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
-    client.mint(&alice, &1000).unwrap();
+    client.mint(&alice, &1000);
     
     // Act: Alice transfiere a Bob
-    client.transfer(&alice, &bob, &250).unwrap();
+    client.transfer(&alice, &bob, &250);
     
     // Assert: Verificar ambos balances
     assert_eq!(client.balance(&alice), 750);  // 1000 - 250
@@ -200,10 +199,10 @@ fn test_transfer_insufficient_balance() {
         &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
         &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
-    client.mint(&alice, &100).unwrap();
+    client.mint(&alice, &100);
     
     // Intentar transferir más de lo que tiene debe fallar
     let result = client.try_transfer(&alice, &bob, &200);
@@ -230,10 +229,10 @@ fn test_transfer_to_self() {
         &String::from_str(&env, "Token"), // CORREGIDO
         &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
-    client.mint(&alice, &1000).unwrap();
+    client.mint(&alice, &1000);
     
     // Transfer a sí mismo debe fallar con InvalidRecipient
     let result = client.try_transfer(&alice, &alice, &100);
@@ -264,17 +263,17 @@ fn test_approve_and_transfer_from() {
         &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
         &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
-    client.mint(&alice, &1000).unwrap();
+    client.mint(&alice, &1000);
     
     // Alice aprueba a Bob para gastar hasta 300 tokens
-    client.approve(&alice, &bob, &300).unwrap();
+    client.approve(&alice, &bob, &300);
     assert_eq!(client.allowance(&alice, &bob), 300);
     
     // Bob transfiere 200 tokens de Alice a Charlie
-    client.transfer_from(&bob, &alice, &charlie, &200).unwrap();
+    client.transfer_from(&bob, &alice, &charlie, &200);
     
     // Verificar estado final
     assert_eq!(client.balance(&alice), 800);          // 1000 - 200
@@ -301,11 +300,11 @@ fn test_transfer_from_insufficient_allowance() {
         &String::from_str(&env, "Token"), // CORREGIDO
         &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
-    client.mint(&alice, &1000).unwrap();
-    client.approve(&alice, &bob, &100).unwrap();  // Solo 100 aprobados
+    client.mint(&alice, &1000);
+    client.approve(&alice, &bob, &100);  // Solo 100 aprobados
     
     // Bob intenta transferir más de lo aprobado
     let result = client.try_transfer_from(&bob, &alice, &charlie, &200);
@@ -330,13 +329,13 @@ fn test_burn() {
         &String::from_str(&env, "Token"), // CORREGIDO: from_slice()
         &String::from_str(&env, "TOK"),   // CORREGIDO
         &7
-    ).unwrap();
+    );
     
     env.mock_all_auths();
-    client.mint(&alice, &1000).unwrap();
+    client.mint(&alice, &1000);
     
     // Alice quema 300 de sus tokens
-    client.burn(&alice, &300).unwrap();
+    client.burn(&alice, &300);
     
     // Verificar que tanto balance como supply se redujeron
     assert_eq!(client.balance(&alice), 700);    // 1000 - 300
