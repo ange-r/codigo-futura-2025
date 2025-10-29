@@ -3,7 +3,7 @@
 
 use soroban_sdk::{
     contract, contractimpl, Address, Env, String, 
-    symbol_short, Symbol
+    symbol_short,
 };
 
 mod storage;
@@ -103,7 +103,9 @@ pub trait TokenTrait {
 
 /// Estructura del contrato Token BDB
 #[contract]
+#[contractclient(name = "TokenBDBClient")]
 pub struct TokenBDB;
+
 
 /// Implementación del contrato
 #[contractimpl]
@@ -458,40 +460,40 @@ impl TokenTrait for TokenBDB {
         // Optimización: eliminar keys si son 0
         // CORREGIDO: sin clone() innecesario
         if new_from_balance == 0 {
-            env.storage().persistent().remove(&DataKey:: Balance(from.clone()));
+            env.storage().persistent().remove(&DataKey::Balance(from.clone()));
         } else {
             env.storage().persistent().set(
-                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
+                &DataKey::Balance(from.clone()), 
                 &new_from_balance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey:: Balance(from.clone()), // CORREGIDO: sin clone()
+                &DataKey::Balance(from.clone()), 
                 100_000,
                 200_000
             );
         }
         
         env.storage().persistent().set(
-            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
+            &DataKey::Balance(to.clone()), 
             &new_to_balance
         );
         env.storage().persistent().extend_ttl(
-            &DataKey:: Balance(to.clone()), // CORREGIDO: sin clone()
+            &DataKey::Balance(to.clone()), 
             100_000,
             200_000
         );
         
         if new_allowance == 0 {
             env.storage().persistent().remove(
-                &DataKey::Allowance(from.clone(), spender.clone()) // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()) 
             );
         } else {
             env.storage().persistent().set(
-                &DataKey::Allowance(from.clone(), spender.clone()), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()), 
                 &new_allowance
             );
             env.storage().persistent().extend_ttl(
-                &DataKey::Allowance(from.clone(), spender.clone()), // CORREGIDO: sin clone()
+                &DataKey::Allowance(from.clone(), spender.clone()), 
                 100_000,
                 200_000
             );
@@ -515,23 +517,23 @@ impl TokenTrait for TokenBDB {
         if !env.storage().instance().has(&DataKey::Initialized) {
             // CORRECCIÓN: String::new() en lugar de String::from_str() que no existe
             // VIEJA FORMA: String::from_str(&env, "") - método inexistente
-            // NUEVA FORMA: String::new(&env) - forma correcta de crear String vacío
-            return String::new(&env);
+            // NUEVA FORMA: String::from_slice(&env, "") - forma correcta de crear String vacío
+            return String::from_slice(&env, "");
         }
         
         env.storage().instance()
             .get(&DataKey::TokenName)
-            .unwrap_or(String::new(&env)) // CORREGIDO: String::new()
+            .unwrap_or(String::from_slice(&env, "")) 
     }
     
     fn symbol(env: Env) -> String {
         if !env.storage().instance().has(&DataKey::Initialized) {
-            return String::new(&env); // CORREGIDO: String::new()
+            return String::from_slice(&env, ""); 
         }
         
         env.storage().instance()
             .get(&DataKey::TokenSymbol)
-            .unwrap_or(String::new(&env)) // CORREGIDO: String::new()
+            .unwrap_or(String::from_slice(&env, ""))
     }
     
     fn decimals(env: Env) -> u32 {
