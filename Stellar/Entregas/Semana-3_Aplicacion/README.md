@@ -32,7 +32,7 @@ SameAccount          // Cuentas origen y destino iguales
 ```
 
 ### Funciones Principales
-initialize(env, admin, name, symbol, decimals)
+`initialize(env, admin, name, symbol, decimals)`
 
 Inicializa el token con metadatos y administrador.
 
@@ -40,7 +40,7 @@ Inicializa el token con metadatos y administrador.
  - Configura: admin, name, symbol, decimals
  - Valida: metadatos y rangos
 
-mint(env, to, amount)
+`mint(env, to, amount)`
 
 Crea nuevos tokens (solo admin).
 
@@ -48,25 +48,23 @@ Crea nuevos tokens (solo admin).
  - Aumenta: balance y total supply
  - Valida: amount > 0
 
-burn(env, from, amount)
+`burn(env, from, amount)`
 
 Quema tokens reduciendo el supply.
-
  - Requiere: autorización del owner
  - Reduce: balance y total supply
  - transfer(env, from, to, amount)
 
 Transfiere tokens entre cuentas.
-
  - Valida: balances, amount, cuentas diferentes
 
-approve(env, from, spender, amount)
+`approve(env, from, spender, amount)`
 
  - Aprueba gastos delegados.
  - Permite: spender gaste hasta amount
  - Revocar: con amount = 0
 
-transfer_from(env, spender, from, to, amount)
+`transfer_from(env, spender, from, to, amount)`
 
  - Transfiere en nombre de otro usuario.
  - Requiere: allowance previo
@@ -238,25 +236,71 @@ transfer_from(env, spender, from, to, amount)
 
 	Solución:
 
-```bash
+```rust
 	// ❌ Incorrecto
 	client.initialize(...).unwrap();
 
 	// ✅ Correcto  
 	client.initialize(...);
 ```
+ - *4. Migración de Sistema de Eventos Deprecado*
 
- - *4. Duplicación de Estructuras de Eventos*
+	Problema:
+```rust
+// ❌ Sistema antiguo deprecado
+env.events().publish(
+    (symbol_short!("transfer"), from, to), 
+    (amount, new_from_balance, new_to_balance)
+);
+```
 
-	Problema: Error de compilación por TransferFromEvent definido dos veces.
+	Solución: Implementar nuevo sistema con #[contractevent]:
+```rust
+// ✅ Nuevo sistema estructurado
+#[contractevent]
+pub struct TransferEvent {
+    pub from: Address,
+    pub to: Address,
+    pub amount: i128,
+    pub from_new_balance: i128,
+    pub to_new_balance: i128,
+}
 
-	Solución: Eliminar definición duplicada y mantener una sola.
+// Uso correcto
+TransferEvent {
+    from: from.clone(),
+    to: to.clone(),
+    amount,
+    from_new_balance: new_from_balance,
+    to_new_balance: new_to_balance,
+}.publish(&env);
+```
 
- - *6. Función transfer_from Incompleta*
+ - *6. Función transfer_from con Evento Incorrecto*
 
-Problema: Código fuera de lugar causando errores de sintaxis.
+	Problema:
+```rust
+// ❌ Usaba TransferEvent en lugar de TransferFromEvent
+TransferEvent {
+    from: from.clone(),
+    to: to.clone(),
+    amount,
+}.publish(&env);
+```
 
-Solución: Reestructurar función completa con firma correcta.
+	Solución: Implementar evento específico con todos los campos:
+```rust
+// ✅ Evento específico para transfer_from
+TransferFromEvent {
+    spender: spender.clone(),
+    from: from.clone(), 
+    to: to.clone(),
+    amount: amount,
+    from_new_balance: new_from_balance,
+    to_new_balance: new_to_balance,
+    new_allowance: new_allowance,
+}.publish(&env);
+```
 ---
 
 ### 🎯 Contract ID Desplegado
@@ -311,8 +355,9 @@ cargo clean && cargo build --release --target wasm32-unknown-unknown
 
 ### 👥 Autor
 
-Desarrollado como parte del programa Codigo Futura de Buen Día Builder - BDB, con el apoyo de Stellar y Builder Aselerator Funsation.
-📄 Licencia
+> Desarrollado como parte del programa Codigo Futura de Buen Día Builder - BDB, con el apoyo de Stellar Developer Fundation y Blockchain Acelerator Fundation. 
+
+📄 ***Licencia***
 
 Este proyecto es de código abierto para fines educativos y de desarrollo en el ecosistema Stellar.
 
