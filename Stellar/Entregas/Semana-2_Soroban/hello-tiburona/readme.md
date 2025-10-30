@@ -274,8 +274,11 @@ mod test {
 
 ## 👥 Autor
 
-Desarrollado como parte del programa Codigo Futura de Buen Día Builder - BDB, con el apoyo de Stellar y Builder Aselerator Funsation. 
+> Desarrollado como parte del programa Codigo Futura de Buen Día Builder - BDB, con el apoyo de Stellar Developer Fundation y Blockchain Acelerator Fundation. 
 
-## 📄 Licencia
+📄 ***Licencia***
 
-Este proyecto es de código abierto y está disponible para fines educativos.
+Este proyecto es de código abierto para fines educativos y de desarrollo en el ecosistema Stellar.
+
+***✨ Token BDB - Construyendo el futuro de las finanzas descentralizadas***
+
