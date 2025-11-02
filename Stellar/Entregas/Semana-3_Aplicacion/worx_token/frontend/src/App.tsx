@@ -93,9 +93,9 @@ function App() {
   const handleTransfer = async () => {
     if (!publicKey) {
       alert('Primero conecta tu wallet')
-      return
+      return  
     }
-    
+
     setLoading(true)
     try {
       const result = await tokenService.transfer(
@@ -154,7 +154,7 @@ function App() {
           </button>
         </div>
         <h1 style={styles.title}>WORX Token</h1>
-        <p style={styles.subtitle}>Plataforma de Pagos para Trabajadoras Independientes</p>
+        <h3 style={styles.subtitle}>Plataforma de Pagos para trabajadoras y trabajadores Independientes</h3>
       </header>
 
       {!connected ? (
@@ -241,6 +241,7 @@ function App() {
                   {loading ? '⏳ Procesando...' : '📤 Enviar WORX'}
                 </button>
 
+
                 <button
                   onClick={disconnect}
                   style={styles.buttonDanger}
@@ -270,6 +271,7 @@ function App() {
       {/* FOOTER */}
       <footer style={styles.footer}>
         <p>© 2024 WORX Token - Powered by Stellar</p>
+        <p>Desarrollado por Angeles Rechach</p>
       </footer>
     </div>
   )
