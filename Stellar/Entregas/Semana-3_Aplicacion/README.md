@@ -1,10 +1,10 @@
-# Token BDB - Contrato Inteligente en Soroban (Stellar)
+# WORX Token - Contrato Inteligente en Soroban (Stellar)
 
 > Contrato de token fungible ERC-20-like desarrollado en Rust para la blockchain Stellar usando Soroban SDK. Implementa el estándar CAP-46 con funcionalidades completas de token.
 
 ## 📋 Descripción
 
-Token BDB (Buen Día Builders) es un token fungible que implementa el estándar CAP-46 de Stellar, compatible con wallets, DEXs y el ecosistema completo de Stellar.
+WORX Token es un token fungible que implementa el estándar CAP-46 de Stellar, compatible con wallets, DEXs y el ecosistema completo de Stellar.
 
 ### Características Principales
 - ✅ **Inicialización única** con metadatos completos
@@ -92,9 +92,9 @@ Transfiere tokens entre cuentas.
 **Estructura del Proyecto**
 
 ```text
-	token_bdb/
+	worx_token/
 	├── Cargo.toml
-	├── src/
+	├── contracts/src/
 	│   ├── lib.rs
 	│   ├── storage.rs
 	│   ├── errors.rs
@@ -105,7 +105,7 @@ Transfiere tokens entre cuentas.
 **Dependencias (Cargo.toml)**
 ```toml
 	[package]
-	name = "token_bdb"
+	name = "worx_token"
 	version = "0.1.0"
 	edition = "2021"
 
@@ -153,8 +153,8 @@ Transfiere tokens entre cuentas.
 		-- \
 		initialize \
 		--admin StellarKP1 \
-		--name "Builder Token" \
-		--symbol "BDB" \
+		--name "WORX token/" \
+		--symbol "WORX" \
 		--decimals 7
 ```
 ---
@@ -361,4 +361,3 @@ cargo clean && cargo build --release --target wasm32-unknown-unknown
 
 Este proyecto es de código abierto para fines educativos y de desarrollo en el ecosistema Stellar.
 
-***✨ Token BDB - Construyendo el futuro de las finanzas descentralizadas***
