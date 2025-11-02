@@ -1,11 +1,20 @@
 // Tipos globales para TypeScript - Freighter API
+interface FreighterAPI {
+  isConnected(): Promise<{ isConnected: boolean }>;
+  getPublicKey(): Promise<string>;
+  requestAccess(): Promise<{
+    error?: { message: string };
+    address?: string;
+  }>;
+  signTransaction(transactionXDR: string, opts: {
+    network: string;
+    address: string;
+  }): Promise<{
+    error?: { message: string };
+    signedTxXdr?: string;
+  }>;
+}
+
 interface Window {
-  freighterApi?: {
-    isConnected: () => Promise<boolean>;
-    enable: () => Promise<void>;
-    getPublicKey: () => Promise<string>;
-    signTransaction: (transactionXDR: string, network?: string) => Promise<string>;
-    getNetwork: () => Promise<string>;
-    setNetwork: (network: string) => Promise<void>;
-  };
+  freighterApi?: FreighterAPI;
 }
