@@ -430,7 +430,7 @@ impl TokenTrait for WorxToken {
         if amount == 0 {
             // Optimización: eliminar key si allowance = 0
             env.storage().persistent().remove(
-                &DataKey::Allowance(from.clone(), spender.clone())  clone()
+                &DataKey::Allowance(from.clone(), spender.clone()) 
             );
         } else {
             env.storage().persistent().set(
