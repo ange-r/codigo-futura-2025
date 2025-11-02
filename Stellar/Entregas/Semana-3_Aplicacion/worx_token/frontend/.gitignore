@@ -1,0 +1,36 @@
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies
+node_modules/
+dist/
+dist-ssr/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+build/
+.out/
+.next/
+nuxt/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Stellar
+*.wasm
+target/
