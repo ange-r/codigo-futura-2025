@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { isConnected, requestAccess } from '@stellar/freighter-api'
 import { Handshake, Cog, Moon, Sun } from 'lucide-react'
 import { tokenService } from './services/stellar'
-import './App.css'
 
 function App() {
   // ========================================

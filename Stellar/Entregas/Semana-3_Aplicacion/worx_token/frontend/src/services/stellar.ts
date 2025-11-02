@@ -1,31 +1,25 @@
 import { isConnected, requestAccess, signTransaction } from '@stellar/freighter-api';
 import {
   Contract,
-  Keypair,
   Networks,
-  SorobanRpc,
   TransactionBuilder,
-  nativeBalance,
-  rpc,
+  Argument,
+  Address,
+  SorobanRpc,
 } from '@stellar/stellar-sdk';
-import * as StellarSdk from '@stellar/stellar-sdk';
 
 export class StellarTokenService {
   private contractAddress: string;
-  private network: Networks;
   private rpcUrl: string;
-  private contractABI: any;
   private userAddress: string = '';
 
   constructor() {
     this.contractAddress = import.meta.env.VITE_CONTRACT_ID || '';
-    this.network = (import.meta.env.VITE_NETWORK as Networks) || Networks.TESTNET;
     this.rpcUrl = import.meta.env.VITE_RPC_URL || 'https://soroban-testnet.stellar.org';
     
     if (!this.contractAddress) {
       console.warn('⚠️ VITE_CONTRACT_ID no configurado en .env');
     }
-  // RPC se inicializa cuando se crea el servidor en cada función
   }
 
   // 🔹 CONECTAR WALLET
@@ -59,7 +53,6 @@ export class StellarTokenService {
         return { connected: false };
       }
       
-      // Si no tenemos la dirección guardada, la solicitamos
       if (!this.userAddress) {
         const accessObj = await requestAccess();
         if (accessObj.address) {
@@ -85,24 +78,22 @@ export class StellarTokenService {
       }
 
       // 1. Crear cliente RPC
-      const server = new StellarSdk.SorobanRpc.Server(this.rpcUrl);
+      const server = new SorobanRpc.Server(this.rpcUrl);
       
-      // 2. Obtener cuenta del usuario (necesaria para construir transacción)
+      // 2. Obtener cuenta del usuario
       const account = await server.getAccount(address);
       console.log('👤 Cuenta obtenida:', address);
 
-      // 3. Construir transacción de lectura del balance
+      // 3. Crear instancia del contrato
       const contract = new Contract(this.contractAddress);
       
       // 4. Invocar función "balance" del contrato
       const tx = new TransactionBuilder(account, {
         fee: '100',
-        networkPassphrase: this.network === Networks.TESTNET 
-          ? Networks.TESTNET_NETWORK_PASSPHRASE 
-          : Networks.PUBLIC_NETWORK_PASSPHRASE,
+        networkPassphrase: Networks.TESTNET_NETWORK_PASSPHRASE,
       })
         .addOperation(
-          contract.call('balance', StellarSdk.Argument.address(new StellarSdk.Address(address)))
+          contract.call('balance', Argument.address(new Address(address)))
         )
         .setTimeout(30)
         .build();
@@ -112,12 +103,12 @@ export class StellarTokenService {
       
       // 6. Enviar a la red
       const result = await server.sendTransaction(
-        StellarSdk.TransactionBuilder.fromXDR(signed, Networks.TESTNET_NETWORK_PASSPHRASE)
+        TransactionBuilder.fromXDR(signed, Networks.TESTNET_NETWORK_PASSPHRASE)
       );
       
       console.log('✅ Balance consultado:', result);
       
-      // 7. Procesar resultado y retornar balance
+      // 7. Procesar resultado
       if (result.status === 'PENDING') {
         const txResult = await server.getTransaction(result.hash);
         if (txResult.status === 'SUCCESS') {
@@ -148,7 +139,7 @@ export class StellarTokenService {
       }
 
       // 1. Crear cliente RPC
-      const server = new StellarSdk.SorobanRpc.Server(this.rpcUrl);
+      const server = new SorobanRpc.Server(this.rpcUrl);
       
       // 2. Obtener cuenta del usuario
       const account = await server.getAccount(from);
@@ -160,16 +151,14 @@ export class StellarTokenService {
       // 4. Construir transacción de transferencia
       const tx = new TransactionBuilder(account, {
         fee: '100',
-        networkPassphrase: this.network === Networks.TESTNET 
-          ? Networks.TESTNET_NETWORK_PASSPHRASE 
-          : Networks.PUBLIC_NETWORK_PASSPHRASE,
+        networkPassphrase: Networks.TESTNET_NETWORK_PASSPHRASE,
       })
         .addOperation(
           contract.call(
             'transfer',
-            StellarSdk.Argument.address(new StellarSdk.Address(from)),
-            StellarSdk.Argument.address(new StellarSdk.Address(to)),
-            StellarSdk.Argument.i128(parseInt(amount))
+            Argument.address(new Address(from)),
+            Argument.address(new Address(to)),
+            Argument.i128(parseInt(amount))
           )
         )
         .setTimeout(30)
@@ -183,7 +172,7 @@ export class StellarTokenService {
       
       // 6. Enviar a la red
       const result = await server.sendTransaction(
-        StellarSdk.TransactionBuilder.fromXDR(signed, Networks.TESTNET_NETWORK_PASSPHRASE)
+        TransactionBuilder.fromXDR(signed, Networks.TESTNET_NETWORK_PASSPHRASE)
       );
       
       console.log('📤 Transacción enviada:', result.hash);
@@ -226,9 +215,7 @@ export class StellarTokenService {
   private async signTransactionWithFreighter(transactionXDR: string): Promise<string> {
     try {
       const signed = await signTransaction(transactionXDR, {
-        network: this.network === Networks.TESTNET 
-          ? 'TESTNET' 
-          : 'PUBLIC',
+        network: 'TESTNET',
       } as any);
       
       return signed;
