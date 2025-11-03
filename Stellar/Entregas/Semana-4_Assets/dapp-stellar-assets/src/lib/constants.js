@@ -13,11 +13,11 @@ export const USDC_TESTNET = {
   issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'
 };
 
-/*// Para referencia: USDC en MAINNET (NO usar en esta clase)
+// Para referencia: USDC en MAINNET (NO usar en esta clase)
 export const USDC_MAINNET = {
   code: 'USDC',
   issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN'
-};*/
+};
 
 // Otros assets útiles en testnet
 export const EURC_TESTNET = {
@@ -28,7 +28,7 @@ export const EURC_TESTNET = {
 // Horizon endpoints
 export const HORIZON_URLS = {
   testnet: 'https://horizon-testnet.stellar.org',
-  /*mainnet: 'https://horizon.stellar.org'*/
+  mainnet: 'https://horizon.stellar.org'
 };
 
 // Network passphrases
