@@ -10,7 +10,7 @@ import {
   Operation,        // Para operaciones (ChangeTrust)
   Asset,            // Para definir assets
   Networks          // Para especificar red (testnet/mainnet)
-} from 'stellar-sdk';
+} from '@stellar/stellar-sdk';
 // Importar Freighter API para firmar
 import { signTransaction, getPublicKey } from '@stellar/freighter-api';
 // Importar cliente de Supabase
